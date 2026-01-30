@@ -21,10 +21,30 @@ IMAGE_FILES = [
     "verdant_cliff.jpg"
 ]
 
+def save_debug_image(pix, filename):
+    """
+    Reverse the preprocessing:
+    1. De-normalize (val * 0.5 + 0.5)
+    2. Scale to 0-255
+    3. Transpose from CHW to HWC
+    """
+    # pix is (3, 384, 384)
+    # 1 & 2. Undo normalization and scale
+    img_array = (pix * 0.5 + 0.5) * 255.0
+
+    # Clip and convert to unsigned 8-bit integers
+    img_array = np.clip(img_array, 0, 255).astype(np.uint8)
+
+    # 3. Transpose from (Channels, Height, Width) to (Height, Width, Channels)
+    img_array = img_array.transpose(1, 2, 0)
+
+    # Save using PIL
+    debug_img = Image.fromarray(img_array)
+    debug_img.save(filename)
+    print(f"Debug image saved to: {filename}")
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
-
 
 # 1. Load Config and Tokenizer
 with open(os.path.join(MODEL_DIR, "model_config.json"), "r") as f:
@@ -99,8 +119,9 @@ print("\n--- DEBUG: ONNX VALUES (SigLIP 2) ---")
 print(f"Text Input IDs (first 10): {text_input_ids[0][:10].tolist()}")
 
 pix = image_input_batch[0]
+save_debug_image(pix, "debug_input_tensor_python.png")
 print(f"Image Pixel Values - Mean: {pix.mean():.6f}, Std: {pix.std():.6f}")
-print(f"Image Pixel Values (slice): {pix[0, 0, :5].tolist()}")
+print(f"Image Pixel Values (slice): {pix[0, 0, :30].tolist()}")
 
 print(f"Text Embeds[0] - Mean: {text_embeds[0].mean():.6f}, Std: {text_embeds[0].std():.6f}")
 print(f"Text Embeds[0] (first 5): {text_embeds[0][:5].tolist()}")
