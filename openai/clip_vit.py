@@ -93,7 +93,7 @@ scaled_scores = raw_similarities * logit_scale
 probs = torch.nn.functional.softmax(scaled_scores, dim=0).numpy()
 
 # 5. Rank and Print Results
-results = sorted(zip(valid_names, probs), key=lambda x: x[1], reverse=True)
+results = sorted(zip(valid_names, probs), key=lamAbda x: x[1], reverse=True)
 
 print("\n--- PYTORCH REFERENCE RESULTS ---")
 print(f"Query: '{QUERY_TEXT}'")
