@@ -14,7 +14,7 @@ filenames = [
     "palace.jpg", "rocky_coast.jpg", "stacked_plates.jpg", "verdant_cliff.jpg"
 ]
 
-images = [Image.open(f"assets/img/{x}") for x in filenames]
+images = [Image.open(f"sl1/assets/img/{x}") for x in filenames]
 
 query_text = "An old car on a campsite"
 

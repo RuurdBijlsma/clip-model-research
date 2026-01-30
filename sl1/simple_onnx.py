@@ -3,9 +3,9 @@ import onnxruntime as ort
 from PIL import Image
 from open_clip import create_model_from_pretrained, get_tokenizer
 
-VISUAL_MODEL_PATH = "../assets/model/visual.onnx"
-TEXT_MODEL_PATH = "../assets/model/text.onnx"
-IMAGE_PATH = "../assets/img/beach_rocks.jpg"
+VISUAL_MODEL_PATH = "assets/model/visual.onnx"
+TEXT_MODEL_PATH = "assets/model/text.onnx"
+IMAGE_PATH = "assets/img/beach_rocks.jpg"
 MODEL_NAME = 'hf-hub:timm/ViT-SO400M-14-SigLIP-384'
 ITERS = 1
 

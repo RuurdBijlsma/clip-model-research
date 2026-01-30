@@ -13,7 +13,7 @@ model.eval()
 tokenizer = get_tokenizer(model_name)
 
 # Prepare Data
-image = preprocess(Image.open("../assets/img/beach_rocks.jpg")).unsqueeze(0).to(device)
+image = preprocess(Image.open("assets/img/beach_rocks.jpg")).unsqueeze(0).to(device)
 text = tokenizer(["rocks in the rock business"]).to(device)
 
 # Embed
