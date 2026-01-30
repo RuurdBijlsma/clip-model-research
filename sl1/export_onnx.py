@@ -62,7 +62,7 @@ print("Exporting Visual Tower to visual.onnx...")
 torch.onnx.export(
     visual_wrapper,
     dummy_image,
-    "assets/model/visual.onnx",
+    "../assets/model/visual.onnx",
     input_names=["pixel_values"],
     output_names=["image_embeddings"],
     dynamic_axes={"pixel_values": {0: "batch_size"}, "image_embeddings": {0: "batch_size"}},
@@ -75,7 +75,7 @@ print("Exporting Text Tower to text.onnx...")
 torch.onnx.export(
     text_wrapper,
     dummy_text,
-    "assets/model/text.onnx",
+    "../assets/model/text.onnx",
     input_names=["input_ids"],
     output_names=["text_embeddings"],
     dynamic_axes={"input_ids": {0: "batch_size"}, "text_embeddings": {0: "batch_size"}},
@@ -86,6 +86,6 @@ torch.onnx.export(
 # 7. Save Tokenizer
 print("Downloading tokenizer.json...")
 config_path = hf_hub_download(repo_id="timm/ViT-SO400M-14-SigLIP-384", filename="tokenizer.json")
-shutil.copy(config_path, "assets/model/tokenizer.json")
+shutil.copy(config_path, "../assets/model/tokenizer.json")
 
 print("Done! Files created successfully.")
