@@ -1,4 +1,4 @@
-import time
+import os
 import onnxruntime as ort
 import numpy as np
 from PIL import Image
@@ -7,97 +7,97 @@ from transformers import CLIPProcessor
 # Config
 VISUAL_MODEL_PATH = "assets/model_openai/visual.onnx"
 TEXT_MODEL_PATH = "assets/model_openai/text.onnx"
-PROCESSOR_PATH = "assets/model_openai"  # Where we saved the processor files
-IMAGE_PATH = "assets/img/beach_rocks.jpg"
-ITERS = 10
+PROCESSOR_PATH = "assets/model_openai"
+IMAGE_DIR = "assets/img"
+QUERY_TEXT = "a photo of rocks"
+
+# List of specific files to check
+IMAGE_FILES = [
+    "beach_rocks.jpg",
+    "beetle_car.jpg",
+    "cat_face.jpg",
+    "dark_sunset.jpg",
+    "palace.jpg",
+    "rocky_coast.jpg",
+    "stacked_plates.jpg",
+    "verdant_cliff.jpg"
+]
 
 # 1. Load Components
-print("Loading Processor...")
+print(f"Loading processor and ONNX models...")
 processor = CLIPProcessor.from_pretrained(PROCESSOR_PATH)
 
-print("Loading ONNX Models...")
 providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
 visual_session = ort.InferenceSession(VISUAL_MODEL_PATH, providers=providers)
 text_session = ort.InferenceSession(TEXT_MODEL_PATH, providers=providers)
 
 
-def run_image_pipeline():
-    start = time.perf_counter()
+def get_image_embeddings(image_paths):
+    """Loads images and returns a batch of embeddings."""
+    images = []
+    valid_paths = []
 
-    # Preprocess Image (returns numpy by default if we ask)
-    image = Image.open(IMAGE_PATH)
-    inputs = processor(images=image, return_tensors="np")
-    pixel_values = inputs["pixel_values"]
+    for path in image_paths:
+        full_path = os.path.join(IMAGE_DIR, path)
+        if os.path.exists(full_path):
+            images.append(Image.open(full_path).convert("RGB"))
+            valid_paths.append(path)
+        else:
+            print(f"Warning: {full_path} not found.")
 
-    # Run Inference
+    if not images:
+        return None, []
+
+    # Preprocess all images at once
+    inputs = processor(images=images, return_tensors="pt")
+    pixel_values = inputs["pixel_values"].numpy()
+
+    # Run ONNX inference (batched)
     onnx_inputs = {visual_session.get_inputs()[0].name: pixel_values}
-    img_output = visual_session.run(None, onnx_inputs)
+    embeddings = visual_session.run(None, onnx_inputs)[0]
 
-    # Print first run only
-    if ITERS == 1:
-        print("Image Embedding [0:20]:", img_output[0][0, :20].tolist())
-
-    return time.perf_counter() - start
+    return embeddings, valid_paths
 
 
-def run_text_pipeline():
-    start = time.perf_counter()
+def get_text_embedding(text):
+    """Returns the embedding for a single text query."""
+    inputs = processor(
+        text=[text],
+        padding="max_length",
+        max_length=77,
+        truncation=True,
+        return_tensors="pt"
+    )
 
-    # Preprocess Text
-    text = "a photo of rocks"
-    inputs = processor(text=[text], padding=True, return_tensors="np")
-
-    # ONNX Runtime expects specific input names
     onnx_inputs = {
-        "input_ids": inputs["input_ids"],
-        "attention_mask": inputs["attention_mask"]
+        "input_ids": inputs["input_ids"].numpy(),
+        "attention_mask": inputs["attention_mask"].numpy()
     }
 
-    text_output = text_session.run(None, onnx_inputs)
-
-    # Print first run only
-    if ITERS == 1:
-        print("Text Embedding [0:20]:", text_output[0][0, :20].tolist())
-
-    return time.perf_counter() - start
+    embedding = text_session.run(None, onnx_inputs)[0]
+    return embedding
 
 
-# --- Execution ---
+# 2. Main Search Logic
+print(f"Processing {len(IMAGE_FILES)} images...")
+img_embs, image_names = get_image_embeddings(IMAGE_FILES)
 
-print("Starting Warmup...")
-run_image_pipeline()
-run_text_pipeline()
+print(f"Encoding query: '{QUERY_TEXT}'...")
+text_emb = get_text_embedding(QUERY_TEXT)
 
-print(f"Starting Benchmark ({ITERS} iterations)...")
-img_times = []
-text_times = []
+# 3. Calculate Similarities
+# We use dot product because vectors were L2-normalized during export.
+# (Batch, Dim) @ (Dim, 1) -> (Batch, 1)
+scores = (img_embs @ text_emb.T).flatten()
 
-# Doing a loop to simulate real benchmark
-for _ in range(ITERS):
-    img_times.append(run_image_pipeline())
-    text_times.append(run_text_pipeline())
+# 4. Rank and Print Results
+results = sorted(zip(image_names, scores), key=lambda x: x[1], reverse=True)
 
+print("\n--- SEARCH RESULTS ---")
+print(f"Query: '{QUERY_TEXT}'\n")
+for i, (name, score) in enumerate(results):
+    marker = "⭐ [BEST MATCH]" if i == 0 else "  "
+    print(f"{marker} {name}: {score:.4f}")
 
-def to_ms(sec_list):
-    avg_sec = sum(sec_list) / len(sec_list)
-    return round(avg_sec * 1000, 2)
-
-
-print("\n--- OPENAI CLIP ONNX RESULTS (AVG PER RUN) ---")
-print(f"Image Pipeline: {to_ms(img_times)}ms")
-print(f"Text Pipeline:  {to_ms(text_times)}ms")
-
-# Verification: Calculate Dot Product (Similarity)
-# Since we normalized in the ONNX export, Dot Product == Cosine Similarity
-print("\n--- SIMILARITY CHECK ---")
-img_emb = visual_session.run(None, {
-    visual_session.get_inputs()[0].name: processor(images=Image.open(IMAGE_PATH), return_tensors="np")[
-        "pixel_values"]})[0]
-txt_emb = text_session.run(None, {
-    "input_ids": processor(text=["a photo of rocks"], return_tensors="np")["input_ids"],
-    "attention_mask": processor(text=["a photo of rocks"], return_tensors="np")["attention_mask"]
-})[0]
-
-# Calculate dot product
-score = (img_emb @ txt_emb.T)[0][0]
-print(f"Similarity score for 'beach_rocks.jpg' vs 'a photo of rocks': {score:.4f}")
+top_image = results[0][0]
+print(f"\nThe closest image to your query is: {top_image}")
