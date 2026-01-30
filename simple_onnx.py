@@ -7,7 +7,7 @@ VISUAL_MODEL_PATH = "assets/model/visual.onnx"
 TEXT_MODEL_PATH = "assets/model/text.onnx"
 IMAGE_PATH = "assets/img/beach_rocks.jpg"
 MODEL_NAME = 'hf-hub:timm/ViT-SO400M-14-SigLIP-384'
-ITERS = 10
+ITERS = 1
 
 # Loaders
 _, preprocess = create_model_from_pretrained(MODEL_NAME)
@@ -29,9 +29,6 @@ def run_image_pipeline():
     print("Image Embedding [0:20]")
     print(img_output[0][0, :20].tolist())
 
-    print("First 10 pixels")
-    print(image_np[0, 0, 0, :10])
-
     return time.perf_counter() - start
 
 
@@ -40,7 +37,9 @@ def run_text_pipeline():
     text_tensor = tokenizer(["rocks in the rock business"])
     text_np = text_tensor.detach().cpu().numpy()
     text_inputs = {text_session.get_inputs()[0].name: text_np}
-    _ = text_session.run(None, text_inputs)
+    text_output = text_session.run(None, text_inputs)
+    print("Text Embedding [0:20]")
+    print(text_output[0][0, :20].tolist())
     return time.perf_counter() - start
 
 
