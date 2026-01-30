@@ -92,6 +92,29 @@ img_embs, image_names = get_image_embeddings(IMAGE_FILES)
 print(f"Encoding query: '{QUERY_TEXT}'...")
 text_emb = get_text_embedding(QUERY_TEXT)
 
+# --- DEBUG COMPARISON ---
+print("\n--- DEBUG: ONNX (HF) VALUES ---")
+# 1. Text Input IDs (Get these from the text embedding function logic)
+# Note: You'll need to re-run the processor briefly or extract from local scope
+debug_text_inputs = processor(text=[QUERY_TEXT], padding="max_length", max_length=77, truncation=True, return_tensors="pt")
+print(f"Text Input IDs (first 10): {debug_text_inputs['input_ids'][0][:10].tolist()}")
+
+# 2. Image Input Tensors (Overview)
+# We need to re-extract pixel_values for the first image
+debug_img_inputs = processor(images=[Image.open(os.path.join(IMAGE_DIR, IMAGE_FILES[0])).convert("RGB")], return_tensors="pt")
+pix = debug_img_inputs["pixel_values"][0]
+print(f"Image Pixel Values - Mean: {pix.mean().item():.6f}, Std: {pix.std().item():.6f}")
+print(f"Image Pixel Values (slice): {pix[0, 0, :5].tolist()}")
+
+# 3. Text Embeddings
+print(f"Text Embeds - Mean: {text_emb.mean():.6f}, Std: {text_emb.std():.6f}")
+print(f"Text Embeds (first 5): {text_emb[0][:5].tolist()}")
+
+# 4. Image Embeddings (First Image)
+print(f"Image Embeds[0] - Mean: {img_embs[0].mean():.6f}, Std: {img_embs[0].std():.6f}")
+print(f"Image Embeds[0] (first 5): {img_embs[0][:5].tolist()}")
+# ------------------------
+
 # 3. Calculate Similarities
 def softmax(x):
     e_x = np.exp(x - np.max(x))
@@ -107,7 +130,7 @@ probs = softmax(scaled_scores)
 results = sorted(zip(image_names, probs), key=lambda x: x[1], reverse=True)
 
 print("\n--- SEARCH RESULTS ---")
-print(f"\nQuery: '{QUERY_TEXT}'")
+print(f"Query: '{QUERY_TEXT}'")
 for i, (name, prob) in enumerate(results):
     marker = "⭐ [BEST]" if i == 0 else "  "
     print(f"{marker} {name}: {prob*100:.2f}%")

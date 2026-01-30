@@ -12,6 +12,7 @@ dependencies = [
     "optimum[onnxruntime]>=2.1.0",
     "pillow>=12.1.0",
     "testcontainers>=4.14.0",
+    "tokenizers>=0.22.2",
     "torch>=2.10.0",
     "torchvision>=0.25.0",
     "transformers==4.57.6",
