@@ -8,9 +8,11 @@
 #    "torch==2.10.0",
 #    "torchvision==0.25.0",
 #    "transformers==4.57.6",
+#    "json",
 # ]
 # ///
 # Run with `uv run export_onnx_openai.py`
+import json
 
 import torch
 import torch.nn as nn
@@ -26,6 +28,11 @@ os.makedirs(output_dir, exist_ok=True)
 print(f"Loading {model_id}...")
 model = CLIPModel.from_pretrained(model_id)
 processor = CLIPProcessor.from_pretrained(model_id)
+
+logit_scale = model.logit_scale.exp().item()
+with open(os.path.join(output_dir, "model_config.json"), "w") as f:
+    json.dump({"logit_scale": logit_scale}, f)
+print(f"Logit scale extracted: {logit_scale:.4f}")
 
 model.eval()
 for param in model.parameters():

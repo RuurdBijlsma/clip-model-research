@@ -1,15 +1,22 @@
+import json
 import os
-import onnxruntime as ort
+
 import numpy as np
+import onnxruntime as ort
 from PIL import Image
 from transformers import CLIPProcessor
 
 # Config
+CONFIG_PATH = "assets/model_openai/model_config.json"
 VISUAL_MODEL_PATH = "assets/model_openai/visual.onnx"
 TEXT_MODEL_PATH = "assets/model_openai/text.onnx"
 PROCESSOR_PATH = "assets/model_openai"
 IMAGE_DIR = "assets/img"
 QUERY_TEXT = "a photo of rocks"
+
+with open(CONFIG_PATH, "r") as f:
+    config = json.load(f)
+    LOGIT_SCALE = config.get("logit_scale", 100.0)
 
 # List of specific files to check
 IMAGE_FILES = [
@@ -86,18 +93,21 @@ print(f"Encoding query: '{QUERY_TEXT}'...")
 text_emb = get_text_embedding(QUERY_TEXT)
 
 # 3. Calculate Similarities
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum()
+
 # We use dot product because vectors were L2-normalized during export.
 # (Batch, Dim) @ (Dim, 1) -> (Batch, 1)
-scores = (img_embs @ text_emb.T).flatten()
+raw_similarities = (img_embs @ text_emb.T).flatten()
+scaled_scores = raw_similarities * LOGIT_SCALE
+probs = softmax(scaled_scores)
 
 # 4. Rank and Print Results
-results = sorted(zip(image_names, scores), key=lambda x: x[1], reverse=True)
+results = sorted(zip(image_names, probs), key=lambda x: x[1], reverse=True)
 
 print("\n--- SEARCH RESULTS ---")
-print(f"Query: '{QUERY_TEXT}'\n")
-for i, (name, score) in enumerate(results):
-    marker = "⭐ [BEST MATCH]" if i == 0 else "  "
-    print(f"{marker} {name}: {score:.4f}")
-
-top_image = results[0][0]
-print(f"\nThe closest image to your query is: {top_image}")
+print(f"\nQuery: '{QUERY_TEXT}'")
+for i, (name, prob) in enumerate(results):
+    marker = "⭐ [BEST]" if i == 0 else "  "
+    print(f"{marker} {name}: {prob*100:.2f}%")
