@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = "==3.12.*"
 # dependencies = [
 #    "huggingface-hub==0.36.0",
 #    "onnxruntime-gpu==1.23.2",
