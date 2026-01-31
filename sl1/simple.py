@@ -14,7 +14,7 @@ tokenizer = get_tokenizer(model_name)
 
 # Prepare Data
 image = preprocess(Image.open("assets/img/beach_rocks.jpg")).unsqueeze(0).to(device)
-text = tokenizer(["rocks in the rock business"]).to(device)
+text = tokenizer(["A photo of Rocks"]).to(device)
 
 # Embed
 with torch.no_grad():
@@ -22,6 +22,13 @@ with torch.no_grad():
     text_emb = model.encode_text(text, normalize=True)
 
 # Print
+
+print("Image pixel slice")
+print(image[0][0][0][:30].cpu().tolist())
+
+print("Text input IDs")
+print(text.cpu().tolist())
+
 print("\nText Embedding [0:50]:")
 print(text_emb[0, :50].tolist())
 print("Image Embedding [0:50]:")
