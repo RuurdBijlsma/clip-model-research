@@ -7,7 +7,7 @@ from transformers import CLIPProcessor, CLIPModel
 # --- CONFIG & PATHS ---
 MODEL_ID = "openai/clip-vit-base-patch32"
 IMAGE_DIR = "assets/img"
-QUERY_TEXT = "a photo of rocks"
+QUERY_TEXT = "A photo of Rocks"
 
 IMAGE_FILES = [
     "beach_rocks.jpg",
